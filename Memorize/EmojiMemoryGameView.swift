@@ -12,8 +12,8 @@ struct EmojiMemoryGameView: View {
     
     var body: some View {
         VStack {
-            ScoreView(color: game.model.theme.color, score: game.model.score.description)
-            
+            ScoreView(game: game)
+
             AspectVGrid(items: game.cards, aspectRatio: 2/3, content: { card in
                 if card.isMatched && !card.isFaceUp && game.model.nbNotMatched != 0 {
                     Rectangle().opacity(0)
@@ -24,55 +24,96 @@ struct EmojiMemoryGameView: View {
                             game.choose(card)
                         }
                         .alert("End of the party", isPresented: $game.model.endParty) {
-                            Button("New Game", role: .cancel, action: initNewGame)
+                            Button("New Game", role: .cancel, action: storeScore)
                         } message: {
-                            Text("Your score is " + game.model.score.description)
+                            Text("Your score is \(game.model.score.description) out of \(game.cards.count) in \(game.time)s")
                         }
                 }
             })
                 .foregroundColor(game.model.theme.color)
             .padding(.horizontal)
-            
+
             Button(action: initNewGame) {
                 Text("New Game").foregroundColor(game.model.theme.color).font(.largeTitle)
             }
         }
+        .navigationTitle("Memory Game")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear(perform: initNewGame)
+        .onDisappear(perform: game.stopTimer)
     }
-    
+
     private func initNewGame() {
+        game.time = 0
+        game.startTimer()
         game.model = EmojiMemoryGame.createMemoryGame()
+    }
+
+    private func storeScore() {
+        game.stopTimer()
+
+        let model = game.model
+        let theme = model.theme
+
+        ScoresManager.storeScore(scores: model.scores,
+                                 theme: Themes.CodableTheme(name: theme.name, emojis: theme.emojis.description, color: theme.color.description),
+                                 score: model.score, scoreMax: game.cards.count,
+                                 time: model.time, date: model.date.description)
+        initNewGame()
     }
 }
 
 struct ScoreView: View {
-    let color: Color
-    let score: String
-    
+    @ObservedObject var game: EmojiMemoryGame
+    var color: Color
+    var score: String
+
+    init(game: EmojiMemoryGame) {
+        self.game = game
+        color = game.model.theme.color
+        score = game.model.score.description
+    }
+
     var body: some View {
         HStack {
-            Text("Score: ").foregroundColor(color).font(.largeTitle)
-            
-            Text(score).foregroundColor(color).font(.largeTitle)
+            HStack {
+                Text("Score: ")
+                Text(score)
+            }.padding()
+
+            Spacer()
+
+            HStack {
+                Text("Time: ")
+                if !game.model.endParty {
+                    Text(game.time.description)
+                } else {
+                    Text(game.model.time.description)
+                        .onAppear(perform: game.stopTimer)
+                }
+            }.padding()
         }
+        .foregroundColor(color)
+        .font(.largeTitle)
     }
 }
 
 struct CardView: View {
     let card: EmojiMemoryGame.Card
     let nbNotMatched: Int
-    
+
     var body: some View {
         GeometryReader(content: { geometry in
             ZStack {
                 let shape = RoundedRectangle(cornerRadius: DrawingConstancts.cornerRadius)
-                
+
                 if card.isFaceUp || nbNotMatched == 0 {
                     shape
                         .fill()
                         .foregroundColor(.white)
-                    
+
                     shape.strokeBorder(lineWidth: DrawingConstancts.lineWidth)
-                            
+
                     Text(card.content)
                         .font(font(in: geometry.size))
                 } else if card.isMatched && nbNotMatched != 0 {
@@ -83,11 +124,11 @@ struct CardView: View {
             }
         })
     }
-    
+
     private func font(in size: CGSize) -> Font {
         Font.system(size: min(size.width, size.height) * DrawingConstancts.fontScale)
     }
-    
+
     private struct DrawingConstancts {
         static let cornerRadius: CGFloat = 10
         static let lineWidth: CGFloat = 3
@@ -95,26 +136,16 @@ struct CardView: View {
     }
 }
 
-struct ngButton: View {
-    var body: some View {
-        Button("NG+", action: initNewGame)
-    }
-    
-    private func initNewGame() {
-        
-    }
-}
-
-
-struct ContentView_Previews: PreviewProvider {
+struct EmojiMemoryGameView_Previews: PreviewProvider {
     static var previews: some View {
         let game = EmojiMemoryGame()
-        
+
         EmojiMemoryGameView(game: game)
             .preferredColorScheme(.light)
-.previewInterfaceOrientation(.portrait)
-        
+            .previewInterfaceOrientation(.portrait)
+
         EmojiMemoryGameView(game: game)
             .preferredColorScheme(.dark)
+            .previewInterfaceOrientation(.portrait)
     }
 }
