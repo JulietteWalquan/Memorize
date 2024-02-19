@@ -4,7 +4,7 @@ TP réalisé dans le cadre de la ressource **R5.05 Programmation avancée** lors
 
 L'objectif de ce TP est de réaliser en 8 séances de 3h une application iOS du jeu de Memory.<br>
 
-Dans cette branche vous trouverez le code que j'ai réalisé pour le 1er rendu.<br>
+Dans cette branche, vous trouverez le code que j'ai réalisé pour le 1er rendu.<br>
 
 *Langage utilisé :*
 - Swift
